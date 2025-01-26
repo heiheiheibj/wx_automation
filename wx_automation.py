@@ -7,6 +7,7 @@ from PIL import ImageGrab
 import easyocr
 import pyperclip
 import win32gui
+import os
 # 定义常量
 # 搜索框相对于微信窗口左上角的X轴偏移量
 SEARCH_X_OFFSET = 100
@@ -34,17 +35,18 @@ def open_wx():
     启动微信应用程序并将其窗口置于最前面。
     """
     global app
-    app = Application(backend='uia').start('K:\\WeChatXXX\\WeChat.exe')
+    wechat_path = 'c:\\program files (x86)\\Tencent\\Wechat\\WeChat.exe'
+    if not os.path.exists(wechat_path):
+        raise Exception(f"微信应用程序路径不存在: {wechat_path}")
+    app = Application(backend='uia').start(wechat_path)        
     app.wait_cpu_usage_lower(threshold=5, timeout=30, usage_interval=1)
     hwnd = win32gui.FindWindow(None, '微信')
     if hwnd:
         if app is not None:
             app.window(handle=hwnd).set_focus()
             rect = app.window(handle=hwnd).rectangle()
-            left, top = rect.left, rect.top
-            print(f"微信窗口的左上角坐标为: ({left}, {top})")
-            right, bottom = left + rect.width(), top + rect.height()
-            print(f"微信窗口的右下角坐标为: ({right}, {bottom})")
+            left, top = rect.left, rect.top            
+            right, bottom = left + rect.width(), top + rect.height()            
             init_wx(left, top, right, bottom)
         else:
             raise Exception("Application对象未正确初始化")
@@ -60,10 +62,7 @@ def init_wx(left, top, right, bottom):
     search_location = [left + SEARCH_X_OFFSET, top + SEARCH_Y_OFFSET]
     rectangle_left = search_location[0] + RECTANGLE_X_OFFSET
     rectangle_right = search_location[1] + RECTANGLE_Y_OFFSET
-    print("input_text_location:", input_text_location)
-    print("search_location:", search_location)
-    print("rectangle_left:", rectangle_left)
-    print("rectangle_right:", rectangle_right)
+
 
 def send_msg():
     """
@@ -96,16 +95,15 @@ def send_message_to_user(name, msg):
     pyautogui.hotkey('delete')
     pyperclip.copy(name)
     pyautogui.hotkey('ctrl', 'v')
-    time.sleep(1)
+    time.sleep(1.5)
     # 截取搜索结果区域的图像并进行OCR识别,判断是否存在好友
     text = capture_and_ocr(rectangle_left, rectangle_right)
     if text.find(name) != -1:
         pyautogui.click(rectangle_left + 20, rectangle_right + 40)
         time.sleep(0.5)
-        pyperclip.copy(msg)
-        print('input_text_location', input_text_location)
+        pyperclip.copy(msg)        
         pyautogui.click(input_text_location)
-        time.sleep(1.5)
+        time.sleep(0.1)
         pyautogui.hotkey('ctrl', 'v')
         pyautogui.press('enter')
         print("发送成功")
