@@ -37,7 +37,7 @@ def open_wx():
     global app
     wechat_path = 'c:\\program files (x86)\\Tencent\\Wechat\\WeChat.exe'
     if not os.path.exists(wechat_path):
-        raise Exception(f"微信应用程序路径不存在: {wechat_path}")
+        raise Exception(f"微信应用程序路径不存在: {wechat_path} ,请修改微信程序路径.")
     app = Application(backend='uia').start(wechat_path)        
     app.wait_cpu_usage_lower(threshold=5, timeout=30, usage_interval=1)
     hwnd = win32gui.FindWindow(None, '微信')
