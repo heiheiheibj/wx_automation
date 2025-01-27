@@ -1,4 +1,6 @@
 import json
+import os
+import subprocess
 import sys
 from pywinauto import Application
 import pyautogui
@@ -6,67 +8,97 @@ import time
 from PIL import ImageGrab
 import easyocr
 import pyperclip
-import win32gui
-import os
+import psutil
+
 # 定义常量
 # 搜索框相对于微信窗口左上角的X轴偏移量
-search_x_offset = 100
+SEARCH_BOX_X_OFFSET = 100
 # 搜索框相对于微信窗口左上角的Y轴偏移量
-search_y_offset = 40
+SEARCH_BOX_Y_OFFSET = 40
 # 输入文本框相对于微信窗口右下角的X轴偏移量
-input_text_location_x_offset = -100
+INPUT_TEXT_LOCATION_X_OFFSET = -100
 # 输入文本框相对于微信窗口右下角的Y轴偏移量
-input_text_location_y_offset = -70
+INPUT_TEXT_LOCATION_Y_OFFSET = -70
 # 截图区域的左上角X坐标
-rectangle_left = 0
+RECTANGLE_LEFT = 0
 # 截图区域的左上角Y坐标
-rectangle_top = 0
+RECTANGLE_TOP = 0
 # 截图区域相对于搜索框的X轴偏移量
-rectangle_x_offset = -40
+RECTANGLE_X_OFFSET = -40
 # 截图区域相对于搜索框的Y轴偏移量
-rectangle_y_offset = 30
+RECTANGLE_Y_OFFSET = 30
 # 截图区域的宽度
-rectangle_width = 200
+RECTANGLE_WIDTH = 200
 # 截图区域的高度
-rectangle_height = 90
+RECTANGLE_HEIGHT = 90
+
+def is_wechat_running():
+    """
+    检查微信是否正在运行。
+    
+    返回:
+        bool: 如果微信正在运行返回True，否则返回False。
+    """
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'].lower().find('wechat') >= 0:
+            return True
+    return False
 
 def open_wx():
     """
-    启动微信应用程序并将其窗口置于最前面。
+    打开微信应用程序。
+    
+    如果微信未运行，则启动微信并等待窗口加载。
+    获取微信主窗口的坐标，并初始化相关位置信息。
+    
+    抛出:
+        Exception: 如果连接微信窗口失败。
     """
-    global app
-    wechat_path = 'c:\\program files (x86)\\Tencent\\Wechat\\WeChat.exe'
-    if not os.path.exists(wechat_path):
-        raise Exception(f"微信应用程序路径不存在: {wechat_path} ,请修改微信程序路径.")
-    app = Application(backend='uia').start(wechat_path)        
-    app.wait_cpu_usage_lower(threshold=5, timeout=30, usage_interval=1)
-    hwnd = win32gui.FindWindow(None, '微信')
-    if hwnd:
-        if app is not None:
-            app.window(handle=hwnd).set_focus()
-            rect = app.window(handle=hwnd).rectangle()
-            left, top = rect.left, rect.top            
-            right, bottom = left + rect.width(), top + rect.height()            
-            init_wx(left, top, right, bottom)
-        else:
-            raise Exception("Application对象未正确初始化")
-    else:
-        raise Exception("未找到微信窗口")
+    wx_path = r'c:\\program files (x86)\\Tencent\\Wechat\\WeChat.exe'
+    if not is_wechat_running():
+        # 启动微信
+        subprocess.Popen(wx_path)
+        # 等待微信启动
+        time.sleep(5)  # 等待一段时间以便窗口加载
+    try:
+        # 使用pywinauto连接到微信窗口
+        app = Application(backend="uia").connect(path=wx_path)
+        # 获取微信主窗口
+        main_window = app.window(title="微信")
+        main_window.set_focus()  # 将微信窗口置顶
+        # 获取窗口坐标
+        rect = main_window.rectangle()
+        left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+        print(f"微信窗口坐标：左={left}, 上={top}, 右={right}, 下={bottom}") 
+        init_wx(left, top, right, bottom)
+    except Exception as e:
+        raise Exception("连接微信窗口失败：", e)
 
 def init_wx(left, top, right, bottom):
     """
     初始化微信窗口的位置信息。
+    
+    参数:
+        left (int): 微信窗口的左边界坐标。
+        top (int): 微信窗口的上边界坐标。
+        right (int): 微信窗口的右边界坐标。
+        bottom (int): 微信窗口的下边界坐标。
     """
     global input_text_location, search_location, rectangle_left, rectangle_top
     input_text_location = [right + INPUT_TEXT_LOCATION_X_OFFSET, bottom + INPUT_TEXT_LOCATION_Y_OFFSET]
-    search_location = [left + SEARCH_X_OFFSET, top + SEARCH_Y_OFFSET]
+    search_location = [left + SEARCH_BOX_X_OFFSET, top + SEARCH_BOX_Y_OFFSET]
     rectangle_left = search_location[0] + RECTANGLE_X_OFFSET
     rectangle_top = search_location[1] + RECTANGLE_Y_OFFSET
-
+    print("input_text_location:", input_text_location)
+    print("search_location:", search_location)
+    print("rectangle_left:", rectangle_left)
+    print("rectangle_top:", rectangle_top)
 
 def send_msg():
     """
     读取配置文件并发送消息给好友。
+    
+    从'msg.json'文件中读取消息配置，遍历每个好友并发送相应的消息。
     """
     with open('msg.json', 'r', encoding='utf-8') as f:
         msg_dict = json.load(f)
@@ -76,6 +108,15 @@ def send_msg():
 def capture_and_ocr(x, y, width=RECTANGLE_WIDTH, height=RECTANGLE_HEIGHT):
     """
     截取指定区域的图像并进行OCR识别。
+    
+    参数:
+        x (int): 截图区域的左上角X坐标。
+        y (int): 截图区域的左上角Y坐标。
+        width (int): 截图区域的宽度，默认为RECTANGLE_WIDTH。
+        height (int): 截图区域的高度，默认为RECTANGLE_HEIGHT。
+    
+    返回:
+        str: OCR识别结果。
     """
     screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
     screenshot.save('captured_image.png')
@@ -88,6 +129,12 @@ def capture_and_ocr(x, y, width=RECTANGLE_WIDTH, height=RECTANGLE_HEIGHT):
 def send_message_to_user(name, msg):
     """
     向指定好友发送消息。
+    
+    参数:
+        name (str): 好友的名称。
+        msg (str): 要发送的消息内容。
+    
+    打印发送消息的状态，并在发送成功后输出提示信息。
     """
     print("正在发送消息给好友：", name, msg)
     pyautogui.click(search_location)
@@ -97,11 +144,12 @@ def send_message_to_user(name, msg):
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(1.5)
     # 截取搜索结果区域的图像并进行OCR识别,判断是否存在好友
-    text = capture_and_ocr(rectangle_left, rectangle_top)
-    if text.find(name) != -1:
+    text = capture_and_ocr(rectangle_left, rectangle_top).lower()
+    if text.find(name.lower()) != -1:
         pyautogui.click(rectangle_left + 20, rectangle_top + 40)
         time.sleep(0.5)
-        pyperclip.copy(msg)        
+        pyperclip.copy(msg)
+        print('input_text_location', input_text_location)
         pyautogui.click(input_text_location)
         time.sleep(0.1)
         pyautogui.hotkey('ctrl', 'v')
