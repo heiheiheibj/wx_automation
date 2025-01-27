@@ -10,25 +10,25 @@ import win32gui
 import os
 # 定义常量
 # 搜索框相对于微信窗口左上角的X轴偏移量
-SEARCH_X_OFFSET = 100
+search_x_offset = 100
 # 搜索框相对于微信窗口左上角的Y轴偏移量
-SEARCH_Y_OFFSET = 40
+search_y_offset = 40
 # 输入文本框相对于微信窗口右下角的X轴偏移量
-INPUT_TEXT_LOCATION_X_OFFSET = -100
+input_text_location_x_offset = -100
 # 输入文本框相对于微信窗口右下角的Y轴偏移量
-INPUT_TEXT_LOCATION_Y_OFFSET = -70
+input_text_location_y_offset = -70
 # 截图区域的左上角X坐标
-RECTANGLE_LEFT = 0
+rectangle_left = 0
 # 截图区域的左上角Y坐标
-RECTANGLE_TOP = 0
+rectangle_top = 0
 # 截图区域相对于搜索框的X轴偏移量
-RECTANGLE_X_OFFSET = -40
+rectangle_x_offset = -40
 # 截图区域相对于搜索框的Y轴偏移量
-RECTANGLE_Y_OFFSET = 30
+rectangle_y_offset = 30
 # 截图区域的宽度
-RECTANGLE_WIDTH = 200
+rectangle_width = 200
 # 截图区域的高度
-RECTANGLE_HEIGHT = 90
+rectangle_height = 90
 
 def open_wx():
     """
@@ -57,11 +57,11 @@ def init_wx(left, top, right, bottom):
     """
     初始化微信窗口的位置信息。
     """
-    global input_text_location, search_location, rectangle_left, rectangle_right
+    global input_text_location, search_location, rectangle_left, rectangle_top
     input_text_location = [right + INPUT_TEXT_LOCATION_X_OFFSET, bottom + INPUT_TEXT_LOCATION_Y_OFFSET]
     search_location = [left + SEARCH_X_OFFSET, top + SEARCH_Y_OFFSET]
     rectangle_left = search_location[0] + RECTANGLE_X_OFFSET
-    rectangle_right = search_location[1] + RECTANGLE_Y_OFFSET
+    rectangle_top = search_location[1] + RECTANGLE_Y_OFFSET
 
 
 def send_msg():
@@ -97,9 +97,9 @@ def send_message_to_user(name, msg):
     pyautogui.hotkey('ctrl', 'v')
     time.sleep(1.5)
     # 截取搜索结果区域的图像并进行OCR识别,判断是否存在好友
-    text = capture_and_ocr(rectangle_left, rectangle_right)
+    text = capture_and_ocr(rectangle_left, rectangle_top)
     if text.find(name) != -1:
-        pyautogui.click(rectangle_left + 20, rectangle_right + 40)
+        pyautogui.click(rectangle_left + 20, rectangle_top + 40)
         time.sleep(0.5)
         pyperclip.copy(msg)        
         pyautogui.click(input_text_location)
