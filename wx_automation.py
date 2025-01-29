@@ -31,6 +31,8 @@ RECTANGLE_Y_OFFSET = 25
 RECTANGLE_WIDTH = 200
 # 截图区域的高度
 RECTANGLE_HEIGHT = 90
+# 是否发送群消息
+SEND_GROUP_MSG = True
 
 def is_wechat_running():
     """
@@ -54,7 +56,8 @@ def open_wx():
     抛出:
         Exception: 如果连接微信窗口失败。
     """
-    wx_path = r'K:\WeChatXXX\WeChat.exe'
+    
+    wx_path = r'C:\Program Files (x86)\Tencent\WeChat\WeChat.exe'
     if not is_wechat_running():
         # 启动微信
         subprocess.Popen(wx_path)
@@ -72,7 +75,7 @@ def open_wx():
         # print(f"微信窗口坐标：左={left}, 上={top}, 右={right}, 下={bottom}") 
         init_wx(left, top, right, bottom)
     except Exception as e:
-        raise Exception("连接微信窗口失败：", e)
+        raise Exception("连接微信窗口失败，请激活微信窗口后再运行程序。", e)
 
 def init_wx(left, top, right, bottom):
     """
@@ -126,6 +129,20 @@ def capture_and_ocr(x, y, width=RECTANGLE_WIDTH, height=RECTANGLE_HEIGHT):
     print("识别结果:", text)
     return text
 
+def is_user_or_group(text,name):
+    """
+    检查搜索的结果是用户还是群组。
+
+    """
+    if text.find('包含:') != -1 :
+        return 'group'
+
+    if text.find(text.lower()) != -1 and '天记' != text[1:3] and text.find('网络查找微信号') == -1:
+        return 'user'
+    
+    return 'unknown'
+    
+
 def send_message_to_user(name, msg):
     """
     向指定好友发送消息。
@@ -147,11 +164,15 @@ def send_message_to_user(name, msg):
     text = capture_and_ocr(rectangle_left, rectangle_top).lower()
     #判断text中第2个和第3个字符是否是'天记'.因为ocr的原因，会把聊天记录识别为职天记灵
     
-    if text.find(name.lower()) != -1 and '天记' != text[1:3] and text.find('网络查找微信号') != -1:
+    #if text.find(name.lower()) != -1 and '天记' != text[1:3] and text.find('网络查找微信号') == -1:
+    user_or_group = is_user_or_group(text, name)
+    if (user_or_group == 'user') or (user_or_group == 'group' and SEND_GROUP_MSG):
+        if is_user_or_group(text,name) == 'group':
+            msg = f'@{name} ' + msg
         pyautogui.click(rectangle_left + 20, rectangle_top + 40)
         time.sleep(0.5)
         pyperclip.copy(msg)
-        print('input_text_location', input_text_location)
+        # print('input_text_location', input_text_location)
         pyautogui.click(input_text_location)
         time.sleep(0.1)
         pyautogui.hotkey('ctrl', 'v')
