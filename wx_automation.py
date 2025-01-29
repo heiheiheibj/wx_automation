@@ -26,7 +26,7 @@ RECTANGLE_TOP = 0
 # 截图区域相对于搜索框的X轴偏移量
 RECTANGLE_X_OFFSET = -40
 # 截图区域相对于搜索框的Y轴偏移量
-RECTANGLE_Y_OFFSET = 30
+RECTANGLE_Y_OFFSET = 25
 # 截图区域的宽度
 RECTANGLE_WIDTH = 200
 # 截图区域的高度
@@ -54,7 +54,7 @@ def open_wx():
     抛出:
         Exception: 如果连接微信窗口失败。
     """
-    wx_path = r'c:\\program files (x86)\\Tencent\\Wechat\\WeChat.exe'
+    wx_path = r'K:\WeChatXXX\WeChat.exe'
     if not is_wechat_running():
         # 启动微信
         subprocess.Popen(wx_path)
@@ -69,7 +69,7 @@ def open_wx():
         # 获取窗口坐标
         rect = main_window.rectangle()
         left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
-        print(f"微信窗口坐标：左={left}, 上={top}, 右={right}, 下={bottom}") 
+        # print(f"微信窗口坐标：左={left}, 上={top}, 右={right}, 下={bottom}") 
         init_wx(left, top, right, bottom)
     except Exception as e:
         raise Exception("连接微信窗口失败：", e)
@@ -89,10 +89,10 @@ def init_wx(left, top, right, bottom):
     search_location = [left + SEARCH_BOX_X_OFFSET, top + SEARCH_BOX_Y_OFFSET]
     rectangle_left = search_location[0] + RECTANGLE_X_OFFSET
     rectangle_top = search_location[1] + RECTANGLE_Y_OFFSET
-    print("input_text_location:", input_text_location)
-    print("search_location:", search_location)
-    print("rectangle_left:", rectangle_left)
-    print("rectangle_top:", rectangle_top)
+    # print("input_text_location:", input_text_location)
+    # print("search_location:", search_location)
+    # print("rectangle_left:", rectangle_left)
+    # print("rectangle_top:", rectangle_top)
 
 def send_msg():
     """
@@ -145,7 +145,9 @@ def send_message_to_user(name, msg):
     time.sleep(1.5)
     # 截取搜索结果区域的图像并进行OCR识别,判断是否存在好友
     text = capture_and_ocr(rectangle_left, rectangle_top).lower()
-    if text.find(name.lower()) != -1:
+    #判断text中第2个和第3个字符是否是'天记'.因为ocr的原因，会把聊天记录识别为职天记灵
+    
+    if text.find(name.lower()) != -1 and '天记' != text[1:3] and text.find('网络查找微信号') != -1:
         pyautogui.click(rectangle_left + 20, rectangle_top + 40)
         time.sleep(0.5)
         pyperclip.copy(msg)
